@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+.Python
+*.egg-info/
+.venv/
+venv/
+env/
+
+# 数据文件(data/ 目录忽略大文件)
+data/*.csv
+data/*.parquet
+data/*.json
+data/*.log
+
+# 但保留 .gitkeep 让目录存在
+!data/.gitkeep
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Airflow
+airflow.cfg
+airflow.db
+logs/
+unittests.cfg
+
+# Spark
+metastore_db/
+derby.log
+spark-warehouse/
