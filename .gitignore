@@ -37,3 +37,6 @@ unittests.cfg
 metastore_db/
 derby.log
 spark-warehouse/
+
+backups/*.sql
+backups/*.sql.gz

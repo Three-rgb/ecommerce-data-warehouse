@@ -53,9 +53,13 @@ def generate_one_order(order_id: int, order_items_buffer: list):
     # 每个订单 1-5 个商品
     n_items = random.choices([1, 2, 3, 4, 5], weights=[40, 30, 15, 10, 5], k=1)[0]
 
+    # 关键修复:用 sample 不重复选商品
+    # 真实业务里,同一个订单里同一个商品只能出现一次(数量在 quantity 里体现)
+    selected_product_ids = random.sample(range(1, N_PRODUCTS + 1), n_items)
+
     total_amount = 0.0
-    for _ in range(n_items):
-        product_id = f"P{random.randint(1, N_PRODUCTS):06d}"
+    for product_id_int in selected_product_ids:
+        product_id = f"P{product_id_int:06d}"
         unit_price = round(random.lognormvariate(5.0, 1.0), 2)  # 价格分布
         unit_price = max(5.0, min(unit_price, 5000.0))  # 限价
         quantity = random.choices([1, 2, 3, 4, 5], weights=[60, 20, 10, 5, 5], k=1)[0]
