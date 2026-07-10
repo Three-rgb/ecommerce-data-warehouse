@@ -1,8 +1,13 @@
+from pathlib import Path
 import pandas as pd
 
-# 读数据
-orders = pd.read_csv("../data/orders.csv", parse_dates=["create_time"])
-users = pd.read_csv("../data/users.csv")
+# 项目根目录（脚本位于 01-data-generation/，所以向上跳一级）
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+DATA_DIR = PROJECT_ROOT / "data"
+
+# 读数据（绝对路径，跨机器/跨工作目录都能跑）
+orders = pd.read_csv(DATA_DIR / "orders.csv", parse_dates=["create_time"])
+users = pd.read_csv(DATA_DIR / "users.csv")
 
 print("=" * 50)
 print("订单总量:", f"{len(orders):,}")

@@ -1,75 +1,139 @@
-# ODS 层 (Operational Data Store) - 原始数据层
+# ODS 层 MySQL 版使用指南
 
-## 什么是 ODS 层?
+## 优势
 
-ODS(Operational Data Store)是数据仓库的第一层,**几乎不做任何数据加工**,把业务系统的原始数据原封不动搬进来。
+MySQL 版:
+- ✅ 贴近真实生产环境
+- ✅ DBeaver 可视化查数据
+- ✅ 支持并发访问(多用户同时查)
+- ✅ 完整的事务支持
+- ✅ 后面 Spark 直接读 MySQL 数据
 
-**核心原则:**
-- ✅ **保留原始结构**:字段名、类型、空值都要保持原样
-- ✅ **全量快照**:每次接入都全量,不做增量删除
-- ✅ **可追溯**:能从 ODS 还原业务系统的原始数据
-- ❌ **不做的**:不脱敏、不去重、不改字段名、不聚合
+## 环境要求
 
-## 为什么需要 ODS 层?
+- MySQL 8.0+ (3306 端口)
+- Python 包: pymysql, sqlalchemy
+- 用户: root (密码在 db_config.py)
 
-```
-业务系统 (MySQL/Postgres/CSV/日志)
-   ↓
-   ↓ 原始数据,不加工
-   ↓
-ODS 层 (我们这里用 DuckDB)
-   ↓
-   ↓ 清洗、规范化
-   ↓
-DWD 层 (下周内容)
-```
+## 启动步骤
 
-**价值:**
-1. **数据可追溯** — 出问题能从 ODS 回到原始数据
-2. **数据隔离** — 业务库查询不影响分析
-3. **统一格式** — 不同来源的数据先放一起,再清洗
-4. **审计合规** — 原始数据保留,改动可追溯
-
-## 本层文件结构
-
-```
-02-ods-layer/
-├── README.md              # 本文档
-├── ddl/                   # 表结构定义
-│   ├── ods_users.sql
-│   ├── ods_products.sql
-│   ├── ods_orders.sql
-│   └── ods_order_items.sql
-├── scripts/               # 数据接入脚本
-│   └── load_to_duckdb.py  # 把 CSV 导入 DuckDB
-├── queries/               # 常用查询模板
-│   └── ods_queries.sql
-└── ods.duckdb             # DuckDB 数据库文件(自动生成,不入 Git)
-```
-
-## 数据接入流程
-
-1. 业务系统产生数据 (CSV/DB/Log)
-2. 通过 `load_to_duckdb.py` 导入到 DuckDB
-3. 用 SQL 在 DuckDB 上做查询(只读,不改数据)
-4. 后续 DWD 层从这里取数
-
-## 技术栈
-
-- **DuckDB 0.10+** - 嵌入式分析数据库
-- **Python 3.13+**
-- **pandas 2.x** - 数据验证
-
-## 启动
+### 1. 装 Python 包
 
 ```powershell
-# 1. 装 DuckDB
-pip install duckdb -i https://pypi.tuna.tsinghua.edu.cn/simple
+# 激活虚拟环境
+F:\DataEng\venv\ecommerce\Scripts\Activate.ps1
 
-# 2. 跑数据接入脚本
-cd F:\Projects\ecommerce-data-warehouse\02-ods-layer\scripts
-python load_to_duckdb.py
-
-# 3. 验证(交互式)
-python -c "import duckdb; con = duckdb.connect('../ods.duckdb'); print(con.execute('SHOW TABLES').df())"
+# 装 SQLAlchemy + pymysql
+pip install sqlalchemy pymysql -i https://pypi.tuna.tsinghua.edu.cn/simple
 ```
+
+### 2. 同步 MySQL 版文件
+
+下载项目包,确保 `02-ods-layer/` 下有:
+- `scripts/db_config.py`       ← 新增
+- `scripts/load_to_mysql.py`   ← 新增
+- `scripts/test_ods_mysql.py`  ← 新增
+- `ddl/ods_*_mysql.sql`        ← 新增(MySQL 语法)
+
+### 3. 配置数据库连接
+
+打开 `scripts/db_config.py`,确认:
+```python
+MYSQL_CONFIG = {
+    "host": "localhost",
+    "port": 3306,
+    "user": "root",
+    "password": "123456",   # ← 改成你的密码
+    "charset": "utf8mb4",
+}
+```
+
+### 4. 跑数据接入
+
+```powershell
+cd F:\Projects\ecommerce-data-warehouse\02-ods-layer\scripts
+python load_to_mysql.py
+```
+
+预期输出:
+```
+[1/4] 创建数据库 ecommerce_dw...
+[2/4] 创建表结构...
+[3/4] 导入 CSV 数据
+  → users.csv → ods_users     (10万,几秒)
+  → products.csv → ods_products (5千,1秒)
+  → orders.csv → ods_orders   (100万,30秒-1分钟)
+  → order_items.csv → ods_order_items (200万,1-2分钟)
+
+📊 ecommerce_dw 数据库表数据汇总
+  ods_users                 100,000 行
+  ods_products                5,000 行
+  ods_orders               1,000,000 行
+  ods_order_items          2,099,219 行
+
+✅ 完成!
+```
+
+### 5. 跑验证
+
+```powershell
+python test_ods_mysql.py
+```
+
+会跑 7 个查询,展示数据分布和质量。
+
+### 6. 在 DBeaver 里看数据
+
+1. DBeaver → 新建连接 → MySQL
+2. 填连接信息:
+   - Host: localhost
+   - Port: 3306
+   - Database: ecommerce_dw
+   - User: root
+   - Password: 123456
+3. 测试连接 → 完成
+4. 左侧导航就能看到 `ecommerce_dw` 下的 4 张表
+5. 双击表名 → 看数据(前 200 行)
+6. 右键 → "SQL 编辑器" → 写查询
+
+## 性能参考
+
+| 数据量 | 导入耗时 | 查询耗时(简单) |
+|--------|----------|-----------------|
+| 10 万用户 | 5 秒 | < 0.1 秒 |
+| 5 千商品 | < 1 秒 | < 0.1 秒 |
+| 100 万订单 | 30-60 秒 | 1-3 秒 |
+| 200 万订单明细 | 60-120 秒 | 2-5 秒 |
+
+100 万订单的导入时间取决于机器性能。InnoDB 引擎会写 binlog,稍慢但安全。
+
+## MySQL 特有优化(后续)
+
+- **主键**:已加
+- **索引**:常用查询字段都加了
+- **分区**(超大数据量时):可按 create_time 月分区
+- **列式存储**:MySQL 8 不支持,需要 ClickHouse 或 Doris
+- **后续可考虑**:TiDB(分布式 MySQL 兼容)
+
+## 常见问题
+
+**Q: 报错 "Access denied for user 'root'"?**
+A: 密码错。在 db_config.py 里改成对的。
+
+**Q: 报错 "Can't connect to MySQL server"?**
+A: MySQL 服务没启动。`net start mysql` 或在服务管理器里启动。
+
+**Q: 导入太慢?**
+A: 改 load_to_mysql.py 里的 `chunksize=10000` 调大(如 50000),用 `method="multi"`。
+
+**Q: 中文乱码?**
+A: charset 已经是 utf8mb4。如果还有问题,检查 MySQL 服务器配置:
+```sql
+SHOW VARIABLES LIKE 'character_set%';
+```
+
+## 下一步
+
+- Week 3:进入 DWD 层(数据清洗、规范化)
+- Week 4:用 Spark 重写 ETL
+- Week 5:Airflow 调度

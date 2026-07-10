@@ -323,11 +323,11 @@ docker exec airflow cat /opt/airflow/standalone_admin_password.txt
 
 ### requirements.txt — 本机 ETL 脚本
 
-`pandas / numpy / Faker / tqdm / pyarrow`(数据生成)+ `duckdb / PyMySQL / SQLAlchemy`(ODS→DWS 入库)共 8 个。
+`pandas / numpy / Faker / tqdm / pyarrow`(数据生成)+ `PyMySQL / SQLAlchemy`(ODS→DWS 入库)共 7 个。
 
 ### requirements-airflow.txt — Airflow 容器
 
-只列了 DAG 里 `import` 的:`apache-airflow / pandas / PyMySQL`,刻意不带 `duckdb / Faker / tqdm / SQLAlchemy` 等用不到的包,装包更快、镜像更小。
+只列了 DAG 里 `import` 的:`apache-airflow / pandas / PyMySQL`,刻意不带 `Faker / tqdm / SQLAlchemy` 等用不到的包,装包更快、镜像更小。
 
 ---
 
