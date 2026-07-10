@@ -101,6 +101,9 @@ ecommerce-data-warehouse/
 │   └── install_airflow.md
 ├── data/                       # 原始 CSV(不进 Git)
 ├── docs/                       # 文档与复盘
+├── requirements.txt            # 本机 ETL 依赖(8 个)
+├── requirements-airflow.txt    # Airflow 容器内依赖(3 个)
+├── eco_venv/                   # 本地 venv(不进 Git)
 │   ├── learning-log.md         # Week 1-2 复盘
 │   ├── week3-log.md            # Week 3 复盘 + 6 道 SQL
 │   ├── week5-log.md            # Week 5 复盘 + 8 个 debug
@@ -309,6 +312,25 @@ docker exec airflow cat /opt/airflow/standalone_admin_password.txt
 
 ---
 
+## 依赖说明
+
+项目拆成两份依赖文件,因为 Airflow 是单独跑在 Docker 容器里的,本机 venv 不需要装它。
+
+| 文件 | 用途 | 用在哪儿 |
+|---|---|---|
+| **[requirements.txt](./requirements.txt)** | Python ETL 脚本依赖 | 本机 venv |
+| **[requirements-airflow.txt](./requirements-airflow.txt)** | Airflow 容器内依赖 | Docker 容器内 `pip install` |
+
+### requirements.txt — 本机 ETL 脚本
+
+`pandas / numpy / Faker / tqdm / pyarrow`(数据生成)+ `duckdb / PyMySQL / SQLAlchemy`(ODS→DWS 入库)共 8 个。
+
+### requirements-airflow.txt — Airflow 容器
+
+只列了 DAG 里 `import` 的:`apache-airflow / pandas / PyMySQL`,刻意不带 `duckdb / Faker / tqdm / SQLAlchemy` 等用不到的包,装包更快、镜像更小。
+
+---
+
 ## 快速开始(本机)
 
 ```bash
@@ -342,10 +364,15 @@ python load_to_dwd.py
 cd ..\..\04-dws-layer\scripts
 python load_to_dws.py
 
-# 9. 启动 Airflow(用 Docker)
+# 9. 启动 Airflow(用 Docker) + 装容器内依赖
 docker run -d --name airflow -p 8080:8080 \
     -e AIRFLOW__CORE__LOAD_EXAMPLES=true \
     apache/airflow:2.10.2-python3.11 standalone
+
+# 容器起来后,把 Airflow 依赖拷进去并安装(DAG 需要 pandas + pymysql)
+docker cp requirements-airflow.txt airflow:/tmp/
+docker exec airflow pip install -r /tmp/requirements-airflow.txt
+
 # 浏览器 http://localhost:8080
 # 触发 ecommerce_etl DAG,4 任务自动跑
 ```

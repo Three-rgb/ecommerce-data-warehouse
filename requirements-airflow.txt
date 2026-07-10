@@ -1,0 +1,4 @@
+# Airflow 单独部署在 Docker,此文件供容器内 pip install 使用
+apache-airflow>=2.8.0
+pandas>=2.0.0
+PyMySQL>=1.1.0
