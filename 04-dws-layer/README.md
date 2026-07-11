@@ -79,7 +79,6 @@ RFM 是经典的客户价值分析模型:
 │   ├── load_to_dws.py    # 接入脚本(DDL 内嵌)
 │   └── test_dws.py       # 验证
 └── queries/
-    ├── dws_queries.sql   # 常用查询
     └── rfm_segmentation.sql  # RFM 分层(面试高频)⭐
 ```
 
