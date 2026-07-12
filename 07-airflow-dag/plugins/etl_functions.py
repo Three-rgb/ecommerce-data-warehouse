@@ -11,7 +11,8 @@ from pathlib import Path
 
 # MySQL 配置(内嵌,避免外部依赖)
 MYSQL_CONFIG = {
-    "host": "localhost",
+    # "host": "wrong_host",  # 故意错
+    "host": "host.docker.internal",
     "port": 3306,
     "user": "root",
     "password": "123456",
@@ -33,7 +34,7 @@ def task_ods_to_dwd():
     print("=" * 60)
 
     # 动态加载 load_to_dwd 模块
-    script_path = r"F:\Projects\ecommerce-data-warehouse\03-dwd-layer\scripts\load_to_dwd.py"
+    script_path = r"/workspace/03-dwd-layer/scripts/load_to_dwd.py"
     spec = importlib.util.spec_from_file_location("load_to_dwd", script_path)
     module = importlib.util.module_from_spec(spec)
     sys.modules["load_to_dwd"] = module
@@ -68,7 +69,7 @@ def task_dwd_to_dws():
     print("=" * 60)
 
     # 动态加载 load_to_dws 模块
-    script_path = r"F:\Projects\ecommerce-data-warehouse\04-dws-layer\scripts\load_to_dws.py"
+    script_path = r"/workspace/04-dws-layer/scripts/load_to_dws.py"
     spec = importlib.util.spec_from_file_location("load_to_dws", script_path)
     module = importlib.util.module_from_spec(spec)
     sys.modules["load_to_dws"] = module

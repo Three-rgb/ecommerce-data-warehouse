@@ -40,3 +40,6 @@ spark-warehouse/
 
 backups/*.sql
 backups/*.sql.gz
+
+# 临时部署笔记
+airflow-redeploy-2026-07-11.md
