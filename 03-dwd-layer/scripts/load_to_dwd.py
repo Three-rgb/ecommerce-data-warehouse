@@ -14,6 +14,7 @@ DWD 层数据接入脚本
   dwd_order_items
 """
 
+import os
 import sys
 import time
 from pathlib import Path
@@ -23,13 +24,14 @@ import pymysql
 SCRIPT_DIR = Path(__file__).parent
 PROJECT_DIR = SCRIPT_DIR.parent.parent
 
-# 直接定义 MySQL 配置,不依赖外部文件
+# MySQL 配置 — 从环境变量读取,兼容本地和容器两种环境
+# 容器内默认 host.docker.internal;本机跑设 MYSQL_HOST=localhost
 MYSQL = {
-    "host": "localhost",
-    "port": 3306,
-    "user": "root",
-    "password": "123456",
-    "database": "ecommerce_dw",
+    "host": os.getenv("MYSQL_HOST", "host.docker.internal"),
+    "port": int(os.getenv("MYSQL_PORT", "3306")),
+    "user": os.getenv("MYSQL_USER", "root"),
+    "password": os.getenv("MYSQL_PASSWORD", "123456"),
+    "database": os.getenv("MYSQL_DATABASE", "ecommerce_dw"),
     "charset": "utf8mb4",
 }
 

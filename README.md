@@ -3,9 +3,9 @@
 > **5 周完成端到端数仓 + Airflow 自动化 ETL 编排**
 > 100 万订单 · 4 层数仓分层 · 6 道面试 SQL · Airflow 自动化调度
 
-![Airflow 电商 ETL 自动化调度](./docs/images/airflow-ecommerce-etl-success.png)
+![Airflow 电商 ETL 全绿通过](./docs/images/airflow-ecommerce-etl-success.png)
 
-*图:Airflow 4 任务全部成功 —— ods_to_dwd → dwd_to_dws → data_quality_check → send_notification*
+*图：DockerOperator + LocalExecutor — 4 任务全绿，50 分钟跑完 320 万行*
 
 ---
 
@@ -260,6 +260,12 @@ docker exec airflow cat /opt/airflow/standalone_admin_password.txt
 
 **Schedule**: 每天凌晨 2 点自动跑
 **Trigger**: 也可手动触发
+
+### 邮件告警
+
+![Airflow 邮件告警](./docs/images/airflow-ecommerce-etl-email-alert.png)
+
+*图：ETL 完成后自动发送 HTML 邮件通知（EmailOperator）*
 
 ---
 

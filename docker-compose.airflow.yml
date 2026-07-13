@@ -1,0 +1,93 @@
+# ============================================================
+# Airflow 集群 — DockerOperator + LocalExecutor
+#
+# 启动:
+#   docker-compose -f docker-compose.airflow.yml --env-file .env.airflow up -d
+#
+# 停止:
+#   docker-compose -f docker-compose.airflow.yml --env-file .env.airflow down
+#
+# 服务:
+#   postgres          — Airflow 元数据库
+#   airflow-init      — 一次性:db migrate + 创建 admin 用户
+#   airflow-webserver — Web UI (:8080)
+#   airflow-scheduler — DAG 调度 + DockerOperator 执行
+# ============================================================
+version: '3.8'
+
+x-airflow-common: &airflow-common
+  build:
+    context: .
+    dockerfile: docker/airflow/Dockerfile
+  environment: &airflow-env
+    AIRFLOW__CORE__EXECUTOR: LocalExecutor
+    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
+    AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+    AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
+    # webserver + scheduler 日志通信密钥(必须一致)
+    AIRFLOW__WEBSERVER__SECRET_KEY: ecommerce_dw_airflow_secret_2026
+    # SMTP 邮件告警(QQ 邮箱)
+    AIRFLOW__SMTP__SMTP_HOST: smtp.qq.com
+    AIRFLOW__SMTP__SMTP_STARTTLS: 'true'
+    AIRFLOW__SMTP__SMTP_SSL: 'false'
+    AIRFLOW__SMTP__SMTP_USER: 3075758453@qq.com
+    AIRFLOW__SMTP__SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+    AIRFLOW__SMTP__SMTP_PORT: '587'
+    AIRFLOW__SMTP__SMTP_MAIL_FROM: 3075758453@qq.com
+  volumes:
+    - ./07-airflow-dag/dags:/opt/airflow/dags:ro
+    - ./07-airflow-dag/plugins:/opt/airflow/plugins:ro
+    - /var/run/docker.sock:/var/run/docker.sock
+  depends_on:
+    postgres:
+      condition: service_healthy
+  restart: "no"
+
+services:
+  # Airflow 元数据库
+  postgres:
+    image: postgres:16-alpine
+    container_name: airflow-postgres
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB: airflow
+    volumes:
+      - airflow-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U airflow"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: "no"
+
+  # 一次性初始化:创建表 + admin 用户
+  airflow-init:
+    <<: *airflow-common
+    container_name: airflow-init
+    command: ["bash", "-c", "airflow db migrate && airflow users create --username admin --firstname Admin --lastname User --role Admin --email admin@example.com --password admin"]
+    restart: "no"
+
+  # Web UI
+  airflow-webserver:
+    <<: *airflow-common
+    container_name: airflow-webserver
+    command: webserver
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8080/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: "no"
+
+  # 调度器(DockerOperator 在这里执行)
+  airflow-scheduler:
+    <<: *airflow-common
+    container_name: airflow-scheduler
+    command: scheduler
+    restart: "no"
+
+volumes:
+  airflow-postgres-data:

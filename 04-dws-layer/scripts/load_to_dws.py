@@ -3,18 +3,21 @@ DWS 层数据接入脚本
 从 DWD 层构建用户/商品/时间宽表
 """
 
+import os
 import sys
 import time
 from pathlib import Path
 
 import pymysql
 
+# MySQL 配置 — 从环境变量读取,兼容本地和容器两种环境
+# 容器内默认 host.docker.internal;本机跑设 MYSQL_HOST=localhost
 MYSQL = {
-    "host": "localhost",
-    "port": 3306,
-    "user": "root",
-    "password": "123456",
-    "database": "ecommerce_dw",
+    "host": os.getenv("MYSQL_HOST", "host.docker.internal"),
+    "port": int(os.getenv("MYSQL_PORT", "3306")),
+    "user": os.getenv("MYSQL_USER", "root"),
+    "password": os.getenv("MYSQL_PASSWORD", "123456"),
+    "database": os.getenv("MYSQL_DATABASE", "ecommerce_dw"),
     "charset": "utf8mb4",
 }
 
