@@ -81,16 +81,11 @@ docker compose -f docker-compose.airflow.yml --env-file .env.airflow up -d
 07-airflow-dag/
 ├── README.md                      # 本文档
 ├── airflow-practice-log.md        # 实战踩坑复盘（7 个坑）
-├── install_airflow.md             # Windows 安装指南（旧，Docker 方案已替代）
 ├── dags/
 │   ├── ecommerce_etl_docker.py    # ✅ DockerOperator + EmailOperator 版 DAG
-│   ├── ecommerce_etl.py           #    旧版 PythonOperator DAG（保留参考）
 │   └── hello_world.py             #    入门 DAG
-├── plugins/
-│   └── etl_functions.py           #    旧版 ETL 函数库（保留参考）
 ├── scripts/
-│   ├── quality_check.py           #    DockerOperator 独立脚本
-│   └── send_notification.py       #    DockerOperator 独立脚本
+│   └── quality_check.py           #    DockerOperator 独立脚本
 └── logs/                          #    Airflow 日志目录
 ```
 

@@ -100,15 +100,14 @@ ecommerce-data-warehouse/
 │   │   └── etl_functions.py
 │   └── install_airflow.md
 ├── data/                       # 原始 CSV(不进 Git)
-├── docs/                       # 文档与复盘
-├── requirements.txt            # 本机 ETL 依赖(8 个)
+├── docs/                       # 文档与截图
+│   ├── learning-journey.md     # 5 周学习旅程（17 个工程坑 + 6 道 SQL）
+│   └── images/                 # 截图
+│       ├── airflow-ecommerce-etl-success.png
+│       └── airflow-ecommerce-etl-email-alert.png
+├── requirements.txt            # 本机 ETL 依赖(7 个)
 ├── requirements-airflow.txt    # Airflow 容器内依赖(3 个)
 ├── eco_venv/                   # 本地 venv(不进 Git)
-│   ├── learning-log.md         # Week 1-2 复盘
-│   ├── week3-log.md            # Week 3 复盘 + 6 道 SQL
-│   ├── week5-log.md            # Week 5 复盘 + 8 个 debug
-│   └── images/                 # 截图
-│       └── airflow-ecommerce-etl-success.png
 ├── backups/                    # MySQL 备份(360MB)
 └── README.md                   # 你正在看的这个文件
 ```
@@ -312,9 +311,8 @@ docker exec airflow cat /opt/airflow/standalone_admin_password.txt
 | 5 | 容器化部署(跨平台路径、权限、MySQL 8.0 strict 模式) |
 
 详见:
-- [`docs/learning-log.md`](./docs/learning-log.md) - Week 1-2 复盘
-- [`docs/week3-log.md`](./docs/week3-log.md) - Week 3 复盘
-- [`docs/week5-log.md`](./docs/week5-log.md) - Week 5 复盘 + 8 个 debug 案例
+- [`docs/learning-journey.md`](./docs/learning-journey.md) - 5 周完整学习旅程
+- [`07-airflow-dag/airflow-practice-log.md`](./07-airflow-dag/airflow-practice-log.md) - Airflow 部署复盘（7 个坑）
 
 ---
 
