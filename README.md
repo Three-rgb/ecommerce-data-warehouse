@@ -14,7 +14,7 @@
 本项目是一个**端到端的电商数据仓库系统**,模拟真实电商业务场景,完整覆盖:
 
 - ✅ **数据生成**:Python + Faker 造 100 万订单测试数据
-- ✅ **4 层数仓**:ODS(原始)→ DWD(清洗)→ DWS(主题宽表)→ ADS(业务指标)
+- ✅ **4 层数仓**:ODS(原始)→ DWD(清洗)→ DWS(主题宽表)→ ADS(业务指标，规划中)
 - ✅ **6 道面试高频 SQL**:留存率、转化漏斗、复购周期、连续登录等
 - ✅ **RFM 客户分层**:8 类客户标签 + 营销策略匹配
 - ✅ **Airflow 自动化 ETL**:Docker 部署,4 任务 DAG,每天自动跑
@@ -114,7 +114,6 @@ ecommerce-data-warehouse/
 │       ├── airflow-ecommerce-etl-success.png
 │       └── airflow-ecommerce-etl-email-alert.png
 ├── requirements.txt            # 本机 ETL 依赖(7 个)
-├── requirements-airflow.txt    # Airflow 容器内依赖(3 个)
 ├── eco_venv/                   # 本地 venv(不进 Git)
 ├── backups/                    # MySQL 备份(360MB)
 └── README.md                   # 你正在看的这个文件
@@ -310,11 +309,11 @@ docker compose -f docker-compose.airflow.yml --env-file .env.airflow up -d
 
 > **端到端电商数仓 + Airflow 自动化 ETL 编排**
 >
-> - 设计 4 层数仓架构(ODS / DWD / DWS / ADS),处理 100 万订单 320 万明细
+> - 设计 4 层数仓架构(ODS / DWD / DWS / ADS 规划中),处理 100 万订单 320 万明细
 > - 用 SQLAlchemy + pymysql 把 320 万行数据导入 MySQL 8.0
 > - 实现 6 道面试高频 SQL(留存率 15.5%、转化漏斗、复购周期、连续登录)
 > - 用 DWS 3 张宽表(用户/商品/时间)+ RFM 8 类客户分层,识别 13,125 个重要价值客户
-> - 部署 Apache Airflow 2.11 到 Docker,设计电商 ETL DAG(ODS→DWD→DWS→校验→通知)
+> - 部署 Apache Airflow 2.10 到 Docker,设计电商 ETL DAG(ODS→DWD→DWS→校验→通知)
 > - 解决 7 个真实工程坑:MySQL 元数据锁死锁、Docker auto_remove 冲突、Web UI 403、并发控制、Docker 网络性能、Git Bash 路径转换、docker-compose YAML 解析等
 >
 > **GitHub**: https://github.com/Three-rgb/ecommerce-data-warehouse
@@ -339,20 +338,20 @@ docker compose -f docker-compose.airflow.yml --env-file .env.airflow up -d
 
 ## 依赖说明
 
-项目拆成两份依赖文件,因为 Airflow 是单独跑在 Docker 容器里的,本机 venv 不需要装它。
+项目拆成两份依赖配置,因为 Airflow 是单独跑在 Docker 容器里的,本机 venv 不需要装它。
 
 | 文件 | 用途 | 用在哪儿 |
 |---|---|---|
 | **[requirements.txt](./requirements.txt)** | Python ETL 脚本依赖 | 本机 venv |
-| **[requirements-airflow.txt](./requirements-airflow.txt)** | Airflow 容器内依赖 | Docker 容器内 `pip install` |
+| **docker/etl/Dockerfile** | Airflow ETL 容器依赖（`pip install` 直接写在 Dockerfile 里） | Docker 容器内构建 |
 
 ### requirements.txt — 本机 ETL 脚本
 
 `pandas / numpy / Faker / tqdm / pyarrow`(数据生成)+ `PyMySQL / SQLAlchemy`(ODS→DWS 入库)共 7 个。
 
-### requirements-airflow.txt — Airflow 容器
+### docker/etl/Dockerfile — ETL 容器
 
-只列了 DAG 里 `import` 的:`apache-airflow / pandas / PyMySQL`,刻意不带 `Faker / tqdm / SQLAlchemy` 等用不到的包,装包更快、镜像更小。
+只装 ETL Task 需要的 `pymysql + pandas`,刻意不带 `Faker / tqdm / SQLAlchemy` 等用不到的包,镜像更小、构建更快。
 
 ---
 
