@@ -190,13 +190,10 @@ QQ 邮箱授权码获取：QQ 邮箱 → 设置 → 账户 → POP3/SMTP 服务 
 ├── 07-airflow-dag/
 │   ├── dags/
 │   │   ├── ecommerce_etl_docker.py  # DockerOperator 版 DAG
-│   │   ├── ecommerce_etl.py         # 旧版 PythonOperator DAG（保留）
 │   │   └── hello_world.py
-│   ├── plugins/
-│   │   └── etl_functions.py         # 旧版 ETL 函数库（保留）
+│   ├── plugins/                      # Airflow 插件目录
 │   └── scripts/
-│       ├── quality_check.py         # DockerOperator 独立脚本
-│       └── send_notification.py     # DockerOperator 独立脚本
+│       └── quality_check.py          # 数据质量校验（DockerOperator 独立脚本）
 ```
 
 ---

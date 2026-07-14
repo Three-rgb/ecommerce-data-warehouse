@@ -54,7 +54,7 @@
 
 - **Python 3.13** — 数据生成、ETL 脚本
 - **MySQL 8.0** — 数仓存储(4 层)
-- **Apache Airflow 2.11** — ETL 调度编排(Docker 部署)
+- **Apache Airflow 2.10** — ETL 调度编排(Docker 部署)
 - **Docker Desktop** — Airflow 容器化
 - **Git + GitHub** — 版本管理
 - **PyCharm** — 开发环境
@@ -92,13 +92,21 @@ ecommerce-data-warehouse/
 │   └── queries/
 │       ├── dws_queries.sql
 │       └── rfm_segmentation.sql  # RFM 客户分层
-├── 07-airflow-dag/            # Week 5 - Airflow 调度
+├── docker-compose.airflow.yml    # Airflow 集群编排（postgres + webserver + scheduler）
+├── .env.airflow                  # 环境变量（SMTP 密码等）
+├── docker/                       # Docker 镜像
+│   ├── airflow/Dockerfile        # Airflow 镜像（预装 docker provider）
+│   └── etl/
+│       ├── Dockerfile            # ETL 任务镜像（pymysql + pandas + 脚本）
+│       └── entrypoint.sh         # 容器入口脚本
+├── 07-airflow-dag/               # Week 5 - Airflow 调度
 │   ├── dags/
-│   │   ├── hello_world.py      # 第一个 DAG(已跑通)
-│   │   └── ecommerce_etl.py    # 电商 ETL DAG(已跑通)
-│   ├── plugins/
-│   │   └── etl_functions.py
-│   └── install_airflow.md
+│   │   ├── hello_world.py               # 第一个 DAG
+│   │   └── ecommerce_etl_docker.py      # DockerOperator 版 ETL DAG（4 任务全绿）
+│   ├── plugins/                          # Airflow 插件目录
+│   ├── scripts/
+│   │   └── quality_check.py              # 数据质量校验脚本
+│   └── airflow-practice-log.md           # 实战复盘（7 个坑 + 架构演进）
 ├── data/                       # 原始 CSV(不进 Git)
 ├── docs/                       # 文档与截图
 │   ├── learning-journey.md     # 5 周学习旅程（17 个工程坑 + 6 道 SQL）
@@ -232,33 +240,46 @@ GROUP BY month ORDER BY month;
 
 ## Airflow 部署
 
+### 架构：DockerOperator + LocalExecutor
+
+```
+docker compose up
+  ├── postgres              — Airflow 元数据库
+  ├── airflow-webserver     — Web UI (:8080)
+  ├── airflow-scheduler     — LocalExecutor + DockerOperator
+  │    └── /var/run/docker.sock 挂载 → 启临时容器
+  └── 临时 ETL 容器          — ecommerce-etl:latest
+       ├── ods_to_dwd           (~37 min)
+       ├── dwd_to_dws           (~13 min)
+       ├── data_quality_check   (2 sec)
+       └── send_notification    (3 sec, EmailOperator)
+```
+
+> 最初尝试了 standalone 单进程模式，因 webserver 不稳定、无法并行而被淘汰。最终采用 docker-compose 多服务 + DockerOperator 方案，Task 之间容器隔离、互不影响。
+
 ### 快速启动
 
 ```bash
-# 1. 拉取 Airflow 镜像
-docker pull apache/airflow:2.10.2-python3.11
+# 1. 构建 ETL 镜像
+docker build -f docker/etl/Dockerfile -t ecommerce-etl:latest .
 
-# 2. 启动 standalone
-docker run -d --name airflow -p 8080:8080 \
-    -e AIRFLOW__CORE__LOAD_EXAMPLES=true \
-    apache/airflow:2.10.2-python3.11 standalone
+# 2. 启动 Airflow 集群
+docker compose -f docker-compose.airflow.yml --env-file .env.airflow up -d
 
-# 3. 找密码
-docker exec airflow cat /opt/airflow/standalone_admin_password.txt
-
-# 4. 浏览器打开 http://localhost:8080
+# 3. 浏览器打开 http://localhost:8080（admin / admin）
+# 4. 手动触发 ecommerce_etl_docker DAG，或等每天凌晨 2 点自动调度
 ```
 
 ### 电商 ETL DAG 结构
 
 ```python
-# 4 个任务自动跑:
+# 4 个任务串行执行（TRUNCATE + INSERT 不能并行，max_active_runs=1）:
 [ods_to_dwd] → [dwd_to_dws] → [data_quality_check] → [send_notification]
-   5-15分钟       15-20分钟          几秒                几秒
+    ~37 min         ~13 min           2 sec                 3 sec
 ```
 
-**Schedule**: 每天凌晨 2 点自动跑
-**Trigger**: 也可手动触发
+**Schedule**: 每天凌晨 2 点自动跑  
+**Trigger**: Web UI 手动触发 或 CLI `docker exec airflow-scheduler airflow dags trigger ecommerce_etl_docker`
 
 ### 邮件告警
 
@@ -294,7 +315,7 @@ docker exec airflow cat /opt/airflow/standalone_admin_password.txt
 > - 实现 6 道面试高频 SQL(留存率 15.5%、转化漏斗、复购周期、连续登录)
 > - 用 DWS 3 张宽表(用户/商品/时间)+ RFM 8 类客户分层,识别 13,125 个重要价值客户
 > - 部署 Apache Airflow 2.11 到 Docker,设计电商 ETL DAG(ODS→DWD→DWS→校验→通知)
-> - 解决 8 个真实工程问题:Windows 兼容、Python 版本、容器化路径、跨平台权限、SQL strict 模式、Airflow standalone 模式 webserver 启动等
+> - 解决 7 个真实工程坑:MySQL 元数据锁死锁、Docker auto_remove 冲突、Web UI 403、并发控制、Docker 网络性能、Git Bash 路径转换、docker-compose YAML 解析等
 >
 > **GitHub**: https://github.com/Three-rgb/ecommerce-data-warehouse
 
@@ -308,7 +329,7 @@ docker exec airflow cat /opt/airflow/standalone_admin_password.txt
 | 2 | DDL 设计要符合数仓原则(主键、索引、字符集) |
 | 3 | 维度退化(避免 JOIN)、业务标记(有效订单/首单) |
 | 4 | 主题宽表 + RFM 评分(NTILE 分 5 档 + 8 类客户) |
-| 5 | 容器化部署(跨平台路径、权限、MySQL 8.0 strict 模式) |
+| 5 | DockerOperator + LocalExecutor 集群部署,4 任务 DAG 全绿,邮件告警 |
 
 详见:
 - [`docs/learning-journey.md`](./docs/learning-journey.md) - 5 周完整学习旅程
@@ -368,17 +389,12 @@ python load_to_dwd.py
 cd ..\..\04-dws-layer\scripts
 python load_to_dws.py
 
-# 9. 启动 Airflow(用 Docker) + 装容器内依赖
-docker run -d --name airflow -p 8080:8080 \
-    -e AIRFLOW__CORE__LOAD_EXAMPLES=true \
-    apache/airflow:2.10.2-python3.11 standalone
+# 9. 构建 ETL 镜像 + 启动 Airflow 集群
+docker build -f docker/etl/Dockerfile -t ecommerce-etl:latest .
+docker compose -f docker-compose.airflow.yml --env-file .env.airflow up -d
 
-# 容器起来后,把 Airflow 依赖拷进去并安装(DAG 需要 pandas + pymysql)
-docker cp requirements-airflow.txt airflow:/tmp/
-docker exec airflow pip install -r /tmp/requirements-airflow.txt
-
-# 浏览器 http://localhost:8080
-# 触发 ecommerce_etl DAG,4 任务自动跑
+# 浏览器 http://localhost:8080 (admin / admin)
+# 触发 ecommerce_etl_docker DAG,4 任务自动跑
 ```
 
 ---
@@ -403,7 +419,7 @@ MIT License
 **Three-rgb** — 数据岗求职候选人
 
 - 5 周从 0 基础完成端到端数仓 + Airflow 自动化
-- 8 个真实 debug 案例(Windows 兼容、SQL strict、跨平台路径等)
+- 7 个真实 Airflow 工程坑(MySQL 元数据锁、Docker auto_remove、Web UI 403 等)
 - GitHub: [@Three-rgb](https://github.com/Three-rgb)
 
 ---
